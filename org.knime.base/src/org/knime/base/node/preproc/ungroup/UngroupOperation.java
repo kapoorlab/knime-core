@@ -95,10 +95,13 @@ public class UngroupOperation {
     /**
      * The hilite handler instance.
      */
+    @Deprecated
     private HiLiteTranslator m_trans = null;
 
+    @Deprecated
     private BufferedDataTable m_table = null;
 
+    @Deprecated
     private int[] m_colIndices;
 
     private DataTableSpec m_newSpec;
@@ -107,9 +110,31 @@ public class UngroupOperation {
      * @param enableHilite hilite enable
      * @param skipMissingValues skip missing values
      * @param removeCollectionCol remove collection columns
+     * @deprecated use {@link #UngroupOperation(DataTableSpec, boolean, boolean, boolean, String...)} instead
      */
+    @Deprecated
     public UngroupOperation(final boolean enableHilite, final boolean skipMissingValues,
         final boolean removeCollectionCol) {
+        m_enableHilite = enableHilite;
+
+        m_skipMissingValues = skipMissingValues;
+
+        m_removeCollectionCol = removeCollectionCol;
+    }
+
+    /**
+     * @param spec data table spec of the original table
+     * @param enableHilite hilite enable
+     * @param skipMissingValues skip missing values
+     * @param removeCollectionCol remove collection columns
+     * @param colNames the column names to create the new spec
+     * @throws InvalidSettingsException
+     * @since 3.6
+     */
+    public UngroupOperation(final DataTableSpec spec, final boolean enableHilite, final boolean skipMissingValues,
+        final boolean removeCollectionCol, final String... colNames) throws InvalidSettingsException {
+        m_newSpec = createTableSpec(spec, removeCollectionCol, colNames);
+
         m_enableHilite = enableHilite;
 
         m_skipMissingValues = skipMissingValues;
@@ -121,7 +146,9 @@ public class UngroupOperation {
      * Only needs to be set if {@link #compute(ExecutionContext)} is called subsequently.
      *
      * @param table to perform the ungroup
+     * @deprecated pass it to the compute methods instead
      */
+    @Deprecated
     public void setTable(final BufferedDataTable table) {
         m_table = table;
     }
@@ -129,7 +156,9 @@ public class UngroupOperation {
     /**
      *
      * @param indices of the collection columns
+     * @deprecated pass it to the compute-methods instead
      */
+    @Deprecated
     public void setColIndices(final int[] indices) {
         m_colIndices = indices;
     }
@@ -139,7 +168,9 @@ public class UngroupOperation {
      *
      * @param newSpec the new spec created with
      *            {@link UngroupOperation#createTableSpec(DataTableSpec, boolean, String...)}
+     * @deprecated use {@link #UngroupOperation(DataTableSpec, boolean, boolean, boolean, String...)} instead
      */
+    @Deprecated
     public void setNewSpec(final DataTableSpec newSpec) {
         m_newSpec = newSpec;
     }
@@ -148,16 +179,33 @@ public class UngroupOperation {
      * @param exec the execution context
      * @return the table with the ungrouped collections
      * @throws Exception the thrown exception
+     * @deprecated use {@link #compute(ExecutionContext, BufferedDataTable, int[], HiLiteTranslator)} instead
      */
+    @Deprecated
     public BufferedDataTable compute(final ExecutionContext exec) throws Exception {
+        return compute(exec, m_table, m_colIndices, m_trans);
+    }
+
+    /**
+     * @param exec the execution context
+     * @param table table to perform the ungroup operation on
+     * @param colIndices indices of the collection columns, if <code>null</code> or the length is 0, the input table
+     *            will be returned!!
+     * @param trans the hilite translate, will be modified directly
+     * @return the table with the ungrouped collections
+     * @throws Exception the thrown exception
+     * @since 3.6
+     */
+    public BufferedDataTable compute(final ExecutionContext exec, final BufferedDataTable table, final int[] colIndices,
+        final HiLiteTranslator trans) throws Exception {
         final BufferedDataContainer dc = exec.createDataContainer(m_newSpec);
-        if (m_table.size() == 0) {
+        if (table.size() == 0) {
             dc.close();
             return dc.getTable();
         }
-        DataTableRowInput in = new DataTableRowInput(m_table);
+        DataTableRowInput in = new DataTableRowInput(table);
         BufferedDataTableRowOutput out = new BufferedDataTableRowOutput(dc);
-        compute(in, out, exec, m_table.size());
+        compute(in, out, exec, table.size(), colIndices, trans);
         in.close();
         out.close();
         return out.getDataTable();
@@ -172,12 +220,33 @@ public class UngroupOperation {
      * @param rowCount row count to track the progress or <code>-1</code> without progress tracking
      * @throws Exception the thrown exception
      * @since 3.2
+     * @deprecated use {@link #compute(ExecutionContext, BufferedDataTable, int[], HiLiteTranslator)} instead
      */
-    public void compute(final RowInput in, final RowOutput out, final ExecutionContext exec, final long rowCount) throws Exception {
+    @Deprecated
+    public void compute(final RowInput in, final RowOutput out, final ExecutionContext exec, final long rowCount)
+        throws Exception {
+        compute(in, out, exec, rowCount, m_colIndices, m_trans);
+    }
+
+    /**
+     * Performs the ungroup operation on the given row input and pushes the result to the row output.
+     *
+     * @param in the row input, will NOT be closed when finished
+     * @param out the row input, will NOT be closed when finished
+     * @param exec the execution context to check cancellation and (optional) progress logging
+     * @param rowCount row count to track the progress or <code>-1</code> without progress tracking
+     * @param colIndices indices of the collection columns, if <code>null</code> or the length is 0 the original rows
+     *            will be output!!
+     * @param trans the hilite translate, will be modified directly
+     * @throws Exception the thrown exception
+     * @since 3.6
+     */
+    public void compute(final RowInput in, final RowOutput out, final ExecutionContext exec, final long rowCount,
+        final int[] colIndices, final HiLiteTranslator trans) throws Exception {
         final Map<RowKey, Set<RowKey>> hiliteMapping = new HashMap<RowKey, Set<RowKey>>();
         @SuppressWarnings("unchecked")
-        Iterator<DataCell>[] iterators = new Iterator[m_colIndices.length];
-        final DataCell[] missingCells = new DataCell[m_colIndices.length];
+        Iterator<DataCell>[] iterators = new Iterator[colIndices.length];
+        final DataCell[] missingCells = new DataCell[colIndices.length];
         Arrays.fill(missingCells, DataType.getMissingCell());
         long rowCounter = 0;
         DataRow row = null;
@@ -189,8 +258,8 @@ public class UngroupOperation {
                     "Processing row " + rowCounter + " of " + rowCount);
             }
             boolean allMissing = true;
-            for (int i = 0, length = m_colIndices.length; i < length; i++) {
-                final DataCell cell = row.getCell(m_colIndices[i]);
+            for (int i = 0, length = colIndices.length; i < length; i++) {
+                final DataCell cell = row.getCell(colIndices[i]);
                 final CollectionDataValue listCell;
                 final Iterator<DataCell> iterator;
                 if (cell instanceof CollectionDataValue) {
@@ -207,7 +276,7 @@ public class UngroupOperation {
                 //with missing cells as well if the skip missing value option is disabled
                 if (!m_skipMissingValues) {
                     final DefaultRow newRow =
-                        createClone(row.getKey(), row, m_colIndices, m_removeCollectionCol, missingCells);
+                        createClone(row.getKey(), row, colIndices, m_removeCollectionCol, missingCells);
                     if (m_enableHilite) {
                         //create the hilite entry
                         final Set<RowKey> keys = new HashSet<RowKey>(1);
@@ -258,7 +327,7 @@ public class UngroupOperation {
                 }
                 final RowKey oldKey = row.getKey();
                 final RowKey newKey = new RowKey(oldKey.getString() + "_" + counter++);
-                final DefaultRow newRow = createClone(newKey, row, m_colIndices, m_removeCollectionCol, newCells);
+                final DefaultRow newRow = createClone(newKey, row, colIndices, m_removeCollectionCol, newCells);
                 out.push(newRow);
                 if (keys != null) {
                     keys.add(newKey);
@@ -269,9 +338,10 @@ public class UngroupOperation {
             }
         }
         if (m_enableHilite) {
-            m_trans.setMapper(new DefaultHiLiteMapper(hiliteMapping));
+            trans.setMapper(new DefaultHiLiteMapper(hiliteMapping));
         }
     }
+
 
     private DefaultRow createClone(final RowKey newKey, final DataRow row, final int[] colIdxs,
         final boolean removeCollectionCol, final DataCell[] newCells) {
@@ -303,13 +373,35 @@ public class UngroupOperation {
     }
 
     /**
+     * @return the new resulting data table spec
+     * @since 3.6
+     */
+    public DataTableSpec getDataTableSpec() {
+        return m_newSpec;
+    }
+
+    /**
+     * @param spec original spec
+     * @param removeCollectionCol <code>true</code> if the collection column should be removed
+     * @param colNames the collection column names
+     * @return the new spec
+     * @throws InvalidSettingsException if an exception occurs
+     * @deprecated will be removed in future versions, use {@link #getDataTableSpec()} instead
+     */
+    @Deprecated
+    public static DataTableSpec createTableSpec(final DataTableSpec spec, final boolean removeCollectionCol,
+        final String... colNames) throws InvalidSettingsException {
+        return createTableSpecInternal(spec, removeCollectionCol, colNames);
+    }
+
+    /**
      * @param spec original spec
      * @param removeCollectionCol <code>true</code> if the collection column should be removed
      * @param colNames the collection column names
      * @return the new spec
      * @throws InvalidSettingsException if an exception occurs
      */
-    public static DataTableSpec createTableSpec(final DataTableSpec spec, final boolean removeCollectionCol,
+    private static DataTableSpec createTableSpecInternal(final DataTableSpec spec, final boolean removeCollectionCol,
         final String... colNames) throws InvalidSettingsException {
         if (colNames == null || colNames.length <= 0) {
             //the user has not selected any column
@@ -366,14 +458,18 @@ public class UngroupOperation {
 
     /**
      * @return the hilite translator
+     * @deprecated pass it to the compute-methods directly
      */
+    @Deprecated
     public HiLiteTranslator getTrans() {
         return m_trans;
     }
 
     /**
      * @param trans the hilite translator to set
+     * @deprecated pass it to the compute-methods directly
      */
+    @Deprecated
     public void setTrans(final HiLiteTranslator trans) {
         m_trans = trans;
     }
