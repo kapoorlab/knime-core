@@ -131,12 +131,6 @@ public abstract class NameFilterPanel<T> extends JPanel {
     @SuppressWarnings("rawtypes")
     private final ArrayListModel m_exclMdl;
 
-    /** Highlight all search hits in the include model. */
-    private final JCheckBox m_markAllHitsIncl;
-
-    /** Highlight all search hits in the exclude model. */
-    private final JCheckBox m_markAllHitsExcl;
-
     /** Radio button for the exclusion option. */
     private final JRadioButton m_enforceExclusion;
 
@@ -354,7 +348,7 @@ public abstract class NameFilterPanel<T> extends JPanel {
             @Override
             public void actionPerformed(final ActionEvent e) {
                 ListModelFilterUtils.onSearch(m_inclList, m_inclMdl, m_searchFieldIncl.getText(),
-                    m_markAllHitsIncl.isSelected());
+                    false);
             }
         };
         m_searchFieldIncl.addActionListener(actionListenerIncl);
@@ -364,17 +358,6 @@ public abstract class NameFilterPanel<T> extends JPanel {
         inclSearchPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         inclSearchPanel.add(m_searchFieldIncl, BorderLayout.CENTER);
         inclSearchPanel.add(m_searchButtonIncl, BorderLayout.EAST);
-        m_markAllHitsIncl = new JCheckBox("Select all search hits");
-        ActionListener actionListenerAllIncl = new ActionListener() {
-            @Override
-            public void actionPerformed(final ActionEvent e) {
-                m_inclList.clearSelection();
-                ListModelFilterUtils.onSearch(m_inclList, m_inclMdl, m_searchFieldIncl.getText(),
-                    m_markAllHitsIncl.isSelected());
-            }
-        };
-        m_markAllHitsIncl.addActionListener(actionListenerAllIncl);
-        inclSearchPanel.add(m_markAllHitsIncl, BorderLayout.PAGE_END);
         JPanel includePanel = new JPanel(new BorderLayout());
         m_includeBorder = BorderFactory.createTitledBorder(INCLUDE_BORDER, " Include ");
         includePanel.setBorder(m_includeBorder);
@@ -407,8 +390,7 @@ public abstract class NameFilterPanel<T> extends JPanel {
         ActionListener actionListenerExcl = new ActionListener() {
             @Override
             public void actionPerformed(final ActionEvent e) {
-                ListModelFilterUtils.onSearch(m_exclList, m_exclMdl, m_searchFieldExcl.getText(),
-                    m_markAllHitsExcl.isSelected());
+                ListModelFilterUtils.onSearch(m_exclList, m_exclMdl, m_searchFieldExcl.getText(), false);
             }
         };
         m_searchFieldExcl.addActionListener(actionListenerExcl);
@@ -418,17 +400,6 @@ public abstract class NameFilterPanel<T> extends JPanel {
         exclSearchPanel.add(new JLabel((searchLabel != null ? searchLabel : "Column(s)")+": "), BorderLayout.WEST);
         exclSearchPanel.add(m_searchFieldExcl, BorderLayout.CENTER);
         exclSearchPanel.add(m_searchButtonExcl, BorderLayout.EAST);
-        m_markAllHitsExcl = new JCheckBox("Select all search hits");
-        ActionListener actionListenerAllExcl = new ActionListener() {
-            @Override
-            public void actionPerformed(final ActionEvent e) {
-                m_exclList.clearSelection();
-                ListModelFilterUtils.onSearch(m_exclList, m_exclMdl, m_searchFieldExcl.getText(),
-                    m_markAllHitsExcl.isSelected());
-            }
-        };
-        m_markAllHitsExcl.addActionListener(actionListenerAllExcl);
-        exclSearchPanel.add(m_markAllHitsExcl, BorderLayout.PAGE_END);
         JPanel excludePanel = new JPanel(new BorderLayout());
         m_excludeBorder = BorderFactory.createTitledBorder(EXCLUDE_BORDER, " Exclude ");
         excludePanel.setBorder(m_excludeBorder);
@@ -536,8 +507,6 @@ public abstract class NameFilterPanel<T> extends JPanel {
         m_searchButtonExcl.setEnabled(enabled);
         m_inclList.setEnabled(enabled);
         m_exclList.setEnabled(enabled);
-        m_markAllHitsIncl.setEnabled(enabled);
-        m_markAllHitsExcl.setEnabled(enabled);
         m_remAllButton.setEnabled(enabled);
         m_remButton.setEnabled(enabled);
         m_addAllButton.setEnabled(enabled);
