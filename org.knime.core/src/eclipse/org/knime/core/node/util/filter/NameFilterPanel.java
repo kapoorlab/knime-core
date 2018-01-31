@@ -52,6 +52,8 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -67,6 +69,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.regex.Pattern;
 
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
@@ -76,19 +79,20 @@ import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
-import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
+import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.ListCellRenderer;
 import javax.swing.ListSelectionModel;
+import javax.swing.RowFilter;
 import javax.swing.border.Border;
 import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.table.TableRowSorter;
 
-import org.knime.core.data.util.ListModelFilterUtils;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.util.filter.NameFilterConfiguration.EnforceOption;
@@ -117,19 +121,19 @@ public abstract class NameFilterPanel<T> extends JPanel {
 
     /** Include list. */
     @SuppressWarnings("rawtypes")
-    private final JList m_inclList;
+    private final JTable m_inclTable;
 
     /** Include model. */
     @SuppressWarnings("rawtypes")
-    private final ArrayListModel m_inclMdl;
+    private final MyTableModel m_inclMdl;
 
     /** Exclude list. */
     @SuppressWarnings("rawtypes")
-    private final JList m_exclList;
+    private final JTable m_exclTable;
 
     /** Exclude model. */
     @SuppressWarnings("rawtypes")
-    private final ArrayListModel m_exclMdl;
+    private final MyTableModel m_exclMdl;
 
     /** Radio button for the exclusion option. */
     private final JRadioButton m_enforceExclusion;
@@ -327,10 +331,10 @@ public abstract class NameFilterPanel<T> extends JPanel {
         buttonPan.add(Box.createGlue());
 
         // include list
-        m_inclMdl = new ArrayListModel();
-        m_inclList = new JList(m_inclMdl);
-        m_inclList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        m_inclList.addMouseListener(new MouseAdapter() {
+        m_inclMdl = new MyTableModel("incl");
+        m_inclTable = new JTable(m_inclMdl);
+        m_inclTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        m_inclTable.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(final MouseEvent me) {
                 if (me.getClickCount() == 2) {
@@ -339,7 +343,9 @@ public abstract class NameFilterPanel<T> extends JPanel {
                 }
             }
         });
-        final JScrollPane jspIncl = new JScrollPane(m_inclList);
+        TableRowSorter<MyTableModel> inclSorter = new TableRowSorter<MyTableModel>(m_inclMdl);
+        m_inclTable.setRowSorter(inclSorter);
+        final JScrollPane jspIncl = new JScrollPane(m_inclTable);
         jspIncl.setMinimumSize(new Dimension(150, 155));
 
         m_searchFieldIncl = new JTextField(8);
@@ -347,11 +353,34 @@ public abstract class NameFilterPanel<T> extends JPanel {
         ActionListener actionListenerIncl = new ActionListener() {
             @Override
             public void actionPerformed(final ActionEvent e) {
-                ListModelFilterUtils.onSearch(m_inclList, m_inclMdl, m_searchFieldIncl.getText(),
-                    false);
+                RowFilter<MyTableModel, Object> rf = null;
+                //If current expression doesn't parse, don't update.
+                try {
+                    // by default perform case insensitive search, escape all regex characters [\^$.|?*+()
+                    rf = RowFilter.regexFilter("(?i)" + Pattern.quote(m_searchFieldIncl.getText()));
+                } catch (java.util.regex.PatternSyntaxException p) {
+                    return;
+                }
+                inclSorter.setRowFilter(rf);
             }
         };
         m_searchFieldIncl.addActionListener(actionListenerIncl);
+        // reset jtable when searchfield is empty
+        m_searchFieldIncl.addKeyListener(new KeyListener() {
+
+            @Override
+            public void keyTyped(final KeyEvent e) { }
+
+            @Override
+            public void keyReleased(final KeyEvent e) {
+                if (m_searchFieldIncl.getText().equals("")) {
+                    inclSorter.setRowFilter(RowFilter.regexFilter(""));
+                }
+            }
+
+            @Override
+            public void keyPressed(final KeyEvent e) { }
+        });
         m_searchButtonIncl.addActionListener(actionListenerIncl);
         JPanel inclSearchPanel = new JPanel(new BorderLayout());
         inclSearchPanel.add(new JLabel((searchLabel != null ? searchLabel : "Column(s)")+": "), BorderLayout.WEST);
@@ -365,10 +394,10 @@ public abstract class NameFilterPanel<T> extends JPanel {
         includePanel.add(jspIncl, BorderLayout.CENTER);
 
         // exclude list
-        m_exclMdl = new ArrayListModel();
-        m_exclList = new JList(m_exclMdl);
-        m_exclList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        m_exclList.addMouseListener(new MouseAdapter() {
+        m_exclMdl = new MyTableModel("excl");
+        m_exclTable = new JTable(m_exclMdl);
+        m_exclTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        m_exclTable.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(final MouseEvent me) {
                 if (me.getClickCount() == 2) {
@@ -379,18 +408,43 @@ public abstract class NameFilterPanel<T> extends JPanel {
         });
 
         // set renderer for items in the in- and exclude list
-        m_inclList.setCellRenderer(getListCellRenderer());
-        m_exclList.setCellRenderer(getListCellRenderer());
-
-        final JScrollPane jspExcl = new JScrollPane(m_exclList);
+//        m_inclTable.setCellRenderer(getListCellRenderer());
+//        m_exclTable.setCellRenderer(getListCellRenderer());
+        TableRowSorter<MyTableModel> exclSorter = new TableRowSorter<MyTableModel>(m_inclMdl);
+        m_exclTable.setRowSorter(exclSorter);
+        final JScrollPane jspExcl = new JScrollPane(m_exclTable);
         jspExcl.setMinimumSize(new Dimension(150, 155));
 
         m_searchFieldExcl = new JTextField(8);
+        // reset jtable when searchfield is empty
+        m_searchFieldExcl.addKeyListener(new KeyListener() {
+
+            @Override
+            public void keyTyped(final KeyEvent e) { }
+
+            @Override
+            public void keyReleased(final KeyEvent e) {
+                if (m_searchFieldExcl.getText().equals("")) {
+                    exclSorter.setRowFilter(RowFilter.regexFilter(""));
+                }
+            }
+
+            @Override
+            public void keyPressed(final KeyEvent e) { }
+        });
         m_searchButtonExcl = new JButton("Search");
         ActionListener actionListenerExcl = new ActionListener() {
             @Override
             public void actionPerformed(final ActionEvent e) {
-                ListModelFilterUtils.onSearch(m_exclList, m_exclMdl, m_searchFieldExcl.getText(), false);
+                RowFilter<MyTableModel, Object> rf = null;
+                //If current expression doesn't parse, don't update.
+                try {
+                    // by default perform case insensitive search, escape all regex characters [\^$.|?*+()
+                    rf = RowFilter.regexFilter("(?i)" + Pattern.quote(m_searchFieldIncl.getText()));
+                } catch (java.util.regex.PatternSyntaxException p) {
+                    return;
+                }
+                exclSorter.setRowFilter(rf);
             }
         };
         m_searchFieldExcl.addActionListener(actionListenerExcl);
@@ -505,8 +559,8 @@ public abstract class NameFilterPanel<T> extends JPanel {
         m_searchButtonIncl.setEnabled(enabled);
         m_searchFieldExcl.setEnabled(enabled);
         m_searchButtonExcl.setEnabled(enabled);
-        m_inclList.setEnabled(enabled);
-        m_exclList.setEnabled(enabled);
+        m_inclTable.setEnabled(enabled);
+        m_exclTable.setEnabled(enabled);
         m_remAllButton.setEnabled(enabled);
         m_remButton.setEnabled(enabled);
         m_addAllButton.setEnabled(enabled);
@@ -617,11 +671,11 @@ public abstract class NameFilterPanel<T> extends JPanel {
         m_exclMdl.clear();
         m_hideNames.clear();
 
-        ArrayList<T> tmp_incl = new ArrayList<>(m_order.size());
         ArrayList<T> tmp_excl = new ArrayList<>(m_order.size());
+        ArrayList<T> tmp_incl = new ArrayList<>(m_order.size());
         for (final String name : m_invalidIncludes) {
             final T t = getTforName(name);
-            tmp_incl.add(t);
+            tmp_incl .add(t);
             m_order.add(t);
         }
         for (final String name : m_invalidExcludes) {
@@ -701,9 +755,9 @@ public abstract class NameFilterPanel<T> extends JPanel {
     /** @return list of all included T's */
     public Set<T> getIncludeList() {
         final Set<T> list = new LinkedHashSet<T>();
-        for (int i = 0; i < m_inclMdl.getSize(); i++) {
+        for (int i = 0; i < m_inclMdl.getRowCount(); i++) {
             @SuppressWarnings("unchecked")
-            T t = (T)m_inclMdl.getElementAt(i);
+            T t = (T)m_inclMdl.getValueAt(i, 0);
             if (!isInvalidValue(getNameForT(t))) {
                 list.add(t);
             }
@@ -729,9 +783,9 @@ public abstract class NameFilterPanel<T> extends JPanel {
      */
     private String[] getInvalidIncludes() {
         List<String> list = new ArrayList<String>();
-        for (int i = 0; i < m_inclMdl.getSize(); i++) {
+        for (int i = 0; i < m_inclMdl.getRowCount(); i++) {
             @SuppressWarnings("unchecked")
-            String name = getNameForT((T)m_inclMdl.getElementAt(i));
+            String name = getNameForT((T)m_inclMdl.getValueAt(i, 0));
             if (isInvalidValue(name)) {
                 list.add(name);
             }
@@ -795,13 +849,13 @@ public abstract class NameFilterPanel<T> extends JPanel {
         // add all selected elements from the include to the exclude list
         HashSet<Object> hash = new HashSet<Object>();
         hash.addAll(m_hideNames);
-        for (Object e : m_exclMdl) {
-            hash.add(e);
+        for (int i = 0; i < m_exclMdl.getSize(); i++) {
+            hash.add(m_exclMdl.getElementAt(i));
         }
         m_exclMdl.clear();
         for (T name : m_order) {
             if (hash.contains(name)) {
-                m_exclMdl.add(name);
+                m_exclMdl.addRow(name);
             }
         }
         m_hideNames.clear();
@@ -1052,11 +1106,14 @@ public abstract class NameFilterPanel<T> extends JPanel {
     @SuppressWarnings("unchecked")
     private void onRemIt() {
         // add all selected elements from the include to the exclude list
-        List<T> o = m_inclList.getSelectedValuesList();
+        List<T> o = new ArrayList<T>();
+        for(int i : m_inclTable.getSelectedRows()) {
+            o.add((T)m_inclMdl.getElementAt(i));
+        }
         HashSet<Object> hash = new HashSet<Object>();
         hash.addAll(o);
-        for (Object e : m_exclMdl) {
-            hash.add(e);
+        for (int i = 0; i < m_exclMdl.getSize(); i++) {
+            hash.add(m_exclMdl.getElementAt(i));
         }
 
         boolean changed = m_inclMdl.removeAll(o);
@@ -1119,10 +1176,16 @@ public abstract class NameFilterPanel<T> extends JPanel {
     @SuppressWarnings("unchecked")
     private void onAddIt() {
         // add all selected elements from the exclude to the include list
-        List<T> o = m_exclList.getSelectedValuesList();
+        List<T> o = new ArrayList<T>();
+        for(int i : m_exclTable.getSelectedRows()) {
+            o.add((T)m_exclMdl.getElementAt(i));
+        }
+
         HashSet<Object> hash = new HashSet<Object>();
         hash.addAll(o);
-        for (Object e : m_inclMdl) {
+        Object e;
+        for (int i = 0; i < m_inclMdl.getSize(); i++) {
+            e = m_inclMdl.getElementAt(i);
             hash.add(e);
         }
 
@@ -1202,10 +1265,10 @@ public abstract class NameFilterPanel<T> extends JPanel {
             }
         }
         if (m_inclMdl.isEmpty()) {
-            m_inclList.setToolTipText(null);
+            m_inclTable.setToolTipText(null);
         }
         if (m_exclMdl.isEmpty()) {
-            m_exclList.setToolTipText(null);
+            m_exclTable.setToolTipText(null);
         }
     }
 
