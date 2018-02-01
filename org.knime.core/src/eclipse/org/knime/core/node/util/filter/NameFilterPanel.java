@@ -331,7 +331,7 @@ public abstract class NameFilterPanel<T> extends JPanel {
         buttonPan.add(Box.createGlue());
 
         // include list
-        m_inclMdl = new MyTableModel("incl");
+        m_inclMdl = new MyTableModel();
         m_inclTable = new JTable(m_inclMdl);
         m_inclTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         m_inclTable.addMouseListener(new MouseAdapter() {
@@ -394,7 +394,7 @@ public abstract class NameFilterPanel<T> extends JPanel {
         includePanel.add(jspIncl, BorderLayout.CENTER);
 
         // exclude list
-        m_exclMdl = new MyTableModel("excl");
+        m_exclMdl = new MyTableModel();
         m_exclTable = new JTable(m_exclMdl);
         m_exclTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         m_exclTable.addMouseListener(new MouseAdapter() {
