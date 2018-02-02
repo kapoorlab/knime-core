@@ -61,7 +61,7 @@ import javax.swing.table.AbstractTableModel;
 class MyTableModel<T> extends AbstractTableModel{
     private ArrayList<T> m_data = new ArrayList<T>();
 
-    private String[] m_header = {"type", "name"};
+    private String[] m_header = {"name"};
 
     MyTableModel (){
 
@@ -134,13 +134,7 @@ class MyTableModel<T> extends AbstractTableModel{
      */
     @Override
     public Object getValueAt(final int rowIndex, final int columnIndex) {
-//        System.out.println(name + "-row " + rowIndex + "-" + "data " + m_data.size());
-//        System.out.println(rowIndex >= m_data.size() ? null : m_data.get(rowIndex));
-        if(m_data.size()<=rowIndex){
-            return "invalid";
-        }else{
-            return columnIndex == 0 ? columnIndex : m_data.get(rowIndex);
-        }
+        return m_data.get(rowIndex);
     }
 
     /**

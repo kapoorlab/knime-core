@@ -95,6 +95,7 @@ import javax.swing.table.TableRowSorter;
 
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.util.DataColumnSpecTableCellRenderer;
 import org.knime.core.node.util.filter.NameFilterConfiguration.EnforceOption;
 
 /**
@@ -408,9 +409,9 @@ public abstract class NameFilterPanel<T> extends JPanel {
         });
 
         // set renderer for items in the in- and exclude list
-//        m_inclTable.setCellRenderer(getListCellRenderer());
-//        m_exclTable.setCellRenderer(getListCellRenderer());
-        TableRowSorter<MyTableModel> exclSorter = new TableRowSorter<MyTableModel>(m_inclMdl);
+        m_inclTable.setDefaultRenderer(Object.class, new DataColumnSpecTableCellRenderer());
+        m_exclTable.setDefaultRenderer(Object.class, new DataColumnSpecTableCellRenderer());
+        TableRowSorter<MyTableModel> exclSorter = new TableRowSorter<MyTableModel>(m_exclMdl);
         m_exclTable.setRowSorter(exclSorter);
         final JScrollPane jspExcl = new JScrollPane(m_exclTable);
         jspExcl.setMinimumSize(new Dimension(150, 155));
@@ -440,7 +441,7 @@ public abstract class NameFilterPanel<T> extends JPanel {
                 //If current expression doesn't parse, don't update.
                 try {
                     // by default perform case insensitive search, escape all regex characters [\^$.|?*+()
-                    rf = RowFilter.regexFilter("(?i)" + Pattern.quote(m_searchFieldIncl.getText()));
+                    rf = RowFilter.regexFilter("(?i)" + Pattern.quote(m_searchFieldExcl.getText()));
                 } catch (java.util.regex.PatternSyntaxException p) {
                     return;
                 }
@@ -1108,7 +1109,7 @@ public abstract class NameFilterPanel<T> extends JPanel {
         // add all selected elements from the include to the exclude list
         List<T> o = new ArrayList<T>();
         for(int i : m_inclTable.getSelectedRows()) {
-            o.add((T)m_inclMdl.getElementAt(i));
+            o.add((T)m_inclTable.getValueAt(i, 0));
         }
         HashSet<Object> hash = new HashSet<Object>();
         hash.addAll(o);
@@ -1178,7 +1179,7 @@ public abstract class NameFilterPanel<T> extends JPanel {
         // add all selected elements from the exclude to the include list
         List<T> o = new ArrayList<T>();
         for(int i : m_exclTable.getSelectedRows()) {
-            o.add((T)m_exclMdl.getElementAt(i));
+            o.add((T)m_exclTable.getValueAt(i, 0));
         }
 
         HashSet<Object> hash = new HashSet<Object>();
