@@ -59,6 +59,7 @@ import org.knime.core.data.DataTypeRegistry;
 import org.knime.core.data.DataValue;
 import org.knime.core.data.StringValue;
 import org.knime.core.data.container.BlobDataCell;
+import org.knime.core.data.util.AutoclosableSupplier;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
@@ -140,7 +141,10 @@ public class XMLBlobCell extends BlobDataCell implements XMLValue, StringValue {
 
     /**
      * {@inheritDoc}
+     * @deprecated use {@link #getDocumentSupplier()} instead. See {@link XMLValue#getDocument()} for detailed
+     *             information.
      */
+    @Deprecated
     @Override
     public Document getDocument() {
         return m_content.getDocument();
@@ -177,6 +181,14 @@ public class XMLBlobCell extends BlobDataCell implements XMLValue, StringValue {
     @Override
     public int hashCode() {
         return m_content.hashCode();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public AutoclosableSupplier<Document> getDocumentSupplier() {
+        return m_content.getDocumentSupplier();
     }
 
 }

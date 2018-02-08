@@ -214,7 +214,7 @@ public class XMLCellFactory implements FromComplexString, FromInputStream {
     	if(xml instanceof DataCell) {
     		return (DataCell)xml;
     	} else {
-    		XMLCellContent content = new XMLCellContent(xml.getDocument());
+    		XMLCellContent content = new XMLCellContent(xml.getDocumentSupplier());
             if (content.getStringValue().length() >= MIN_BLOB_SIZE_IN_BYTES) {
                 return new XMLBlobCell(content);
             } else {

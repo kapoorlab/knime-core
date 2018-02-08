@@ -52,6 +52,7 @@ import javax.swing.Icon;
 import org.knime.core.data.DataValue;
 import org.knime.core.data.ExtensibleUtilityFactory;
 import org.knime.core.data.convert.DataValueAccessMethod;
+import org.knime.core.data.util.AutoclosableSupplier;
 import org.knime.core.data.xml.util.XmlDomComparer;
 import org.w3c.dom.Document;
 
@@ -63,12 +64,26 @@ import org.w3c.dom.Document;
  */
 public interface XMLValue extends DataValue {
     /**
-     * Returns the parsed XML document. Note, as per definition of {@link org.knime.core.data.DataCell}
-     * the returned document must not be modified by clients as data cells are read-only.
+     * Returns the parsed XML document. Note, as per definition of {@link org.knime.core.data.DataCell} the returned
+     * document must not be modified by clients as data cells are read-only.
+     *
      * @return the DOM
+     *
+     * @deprecated As DOM documents are not thread-safe (including read-only). Instead use
+     *             {@link #getDocumentSupplier()}, which returns an auto-closable supplier providing a thread-safe usage
+     *             of the DOM.
      */
+    @Deprecated
     @DataValueAccessMethod(name = "Document (XML)")
     Document getDocument();
+
+    /**
+     * Returns the parsed XML document. Note, as per definition of {@link org.knime.core.data.DataCell} the returned
+     * document must not be modified by clients as data cells are read-only.
+     *
+     * @return A supplier wrapping the document for thread-safe usage.
+     */
+    AutoclosableSupplier<Document> getDocumentSupplier();
 
     /**
      * Meta information to this value type.
@@ -86,7 +101,10 @@ public interface XMLValue extends DataValue {
      * @since 3.0
      */
     static boolean equalContent(final XMLValue v1, final XMLValue v2) {
-        return XmlDomComparer.equals(v1.getDocument(), v2.getDocument());
+        try (AutoclosableSupplier<Document> s1 = v1.getDocumentSupplier();
+                AutoclosableSupplier<Document> s2 = v2.getDocumentSupplier()) {
+            return XmlDomComparer.equals(s1.getObject(), s2.getObject());
+        }
     }
 
     /**
@@ -97,7 +115,9 @@ public interface XMLValue extends DataValue {
      * @since 3.0
      */
     static int hashCode(final XMLValue v) {
-        return XmlDomComparer.hashCode(v.getDocument());
+        try (AutoclosableSupplier<Document> supplier = v.getDocumentSupplier()) {
+            return XmlDomComparer.hashCode(supplier.getObject());
+        }
     }
 
     /** Implementations of the meta information of this value class. */

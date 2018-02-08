@@ -59,6 +59,7 @@ import org.knime.core.data.DataType;
 import org.knime.core.data.DataTypeRegistry;
 import org.knime.core.data.DataValue;
 import org.knime.core.data.StringValue;
+import org.knime.core.data.util.AutoclosableSupplier;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
@@ -136,7 +137,10 @@ public class XMLCell extends DataCell implements XMLValue, StringValue {
 
     /**
      * {@inheritDoc}
+     * @deprecated use {@link #getDocumentSupplier()} instead. See {@link XMLValue#getDocument()} for detailed
+     *             information.
      */
+    @Deprecated
     @Override
     public Document getDocument() {
         return m_content.getDocument();
@@ -181,5 +185,13 @@ public class XMLCell extends DataCell implements XMLValue, StringValue {
     @Override
     public String getStringValue() {
         return m_content.getStringValue();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public AutoclosableSupplier<Document> getDocumentSupplier() {
+        return m_content.getDocumentSupplier();
     }
 }
