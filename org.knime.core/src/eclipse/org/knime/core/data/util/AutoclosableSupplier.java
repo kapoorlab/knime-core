@@ -108,6 +108,7 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * @author Moritz Heine, KNIME GmbH, Konstanz, Germany
  * @param <T> The type that shall be stored.
+ * @since 3.6
  */
 final public class AutoclosableSupplier<T> implements AutoCloseable {
 

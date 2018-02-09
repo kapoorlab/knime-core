@@ -222,6 +222,7 @@ public class PMMLCell extends DataCell implements PMMLValue, StringValue {
 
     /**
      * {@inheritDoc}
+     * @since 3.6
      */
     @Override
     public AutoclosableSupplier<Document> getDocumentSupplier() {

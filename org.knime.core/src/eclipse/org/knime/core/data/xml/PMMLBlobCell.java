@@ -220,6 +220,7 @@ public class PMMLBlobCell extends BlobDataCell
 
     /**
      * {@inheritDoc}
+     * @since 3.6
      */
     @Override
     public AutoclosableSupplier<Document> getDocumentSupplier() {

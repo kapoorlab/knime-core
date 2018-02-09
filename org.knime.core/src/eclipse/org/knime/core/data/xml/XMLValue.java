@@ -82,6 +82,8 @@ public interface XMLValue extends DataValue {
      * document must not be modified by clients as data cells are read-only.
      *
      * @return A supplier wrapping the document for thread-safe usage.
+     *
+     * @since 3.6
      */
     AutoclosableSupplier<Document> getDocumentSupplier();
 

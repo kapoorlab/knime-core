@@ -185,6 +185,7 @@ public class XMLBlobCell extends BlobDataCell implements XMLValue, StringValue {
 
     /**
      * {@inheritDoc}
+     * @since 3.6
      */
     @Override
     public AutoclosableSupplier<Document> getDocumentSupplier() {
