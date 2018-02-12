@@ -351,9 +351,9 @@ public abstract class NameFilterPanel<T> extends JPanel {
         String iconBase = pack.getName().replace(".", "/") + "/";
         URL filterUrl = this.getClass().getClassLoader().getResource(iconBase + "filter.png");
         URL addUrl = this.getClass().getClassLoader().getResource(iconBase + "add.png");
-        URL addAllUrl = this.getClass().getClassLoader().getResource(iconBase + "add-all.png");
+        URL addAllUrl = this.getClass().getClassLoader().getResource(iconBase + "add_all.png");
         URL remUrl = this.getClass().getClassLoader().getResource(iconBase + "rem.png");
-        URL remAllUrl = this.getClass().getClassLoader().getResource(iconBase + "rem-all.png");
+        URL remAllUrl = this.getClass().getClassLoader().getResource(iconBase + "rem_all.png");
 
         // include list
         m_inclMdl = new MyTableModel();
